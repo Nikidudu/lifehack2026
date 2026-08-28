@@ -8,12 +8,17 @@ from app.models.product import (
     TargetPersona,
     UseCase,
 )
+from app.models.readiness_judge import ReadinessJudgeResult
+from app.models.scoring import DimensionScore, ScoringResult
 
 __all__ = [
     "Claim",
     "Comparison",
+    "DimensionScore",
     "HandledConstraints",
     "Product",
+    "ReadinessJudgeResult",
+    "ScoringResult",
     "TargetPersona",
     "UseCase",
 ]

@@ -7,6 +7,18 @@ from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, field_validator
 
 NonNegativePrice = Annotated[FiniteFloat, Field(ge=0)]
 
+PRODUCT_SCHEMA_VERSION = "1.0.0"
+SUPPORTED_PRODUCT_SECTIONS = (
+    "identity",
+    "core_attributes",
+    "use_cases",
+    "target_personas",
+    "comparisons",
+    "claims_and_evidence",
+    "constraints_handled",
+    "storytelling",
+)
+
 
 class ProductModel(BaseModel):
     """Common configuration for canonical product models."""
