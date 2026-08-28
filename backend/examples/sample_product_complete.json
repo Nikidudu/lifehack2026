@@ -1,0 +1,58 @@
+{
+  "product_id": "shoe-001",
+  "title": "Breeze Runner 2",
+  "brand": "Example Athletics",
+  "category": "Running shoes",
+  "description": "A lightweight road-running shoe designed for warm weather training.",
+  "specifications": {
+    "weight": "240 g",
+    "heel_to_toe_drop": "8 mm"
+  },
+  "materials": ["Recycled mesh", "Rubber"],
+  "dimensions": {"size_range": "EU 36-47"},
+  "price": 179.9,
+  "currency": "SGD",
+  "availability": "In stock",
+  "use_cases": [
+    {
+      "name": "Humid-weather training",
+      "description": "Daily road training in warm, humid weather.",
+      "conditions": ["High humidity", "Road surfaces"]
+    }
+  ],
+  "target_personas": [
+    {
+      "name": "Recreational runner",
+      "description": "A runner preparing for a first half marathon.",
+      "priorities": ["Breathability", "Low weight"],
+      "constraints": ["Budget under S$200"]
+    }
+  ],
+  "comparisons": [
+    {
+      "alternative": "Traditional stability shoe",
+      "advantages": ["Lighter upper"],
+      "disadvantages": ["Less stability support"],
+      "evidence": "Manufacturer weight specifications"
+    }
+  ],
+  "claims": [
+    {
+      "claim": "Upper contains recycled material",
+      "evidence": "Material composition report",
+      "source": "https://example.com/material-report"
+    }
+  ],
+  "constraints_handled": {
+    "budget": ["Under S$200"],
+    "climate": ["Hot and humid"],
+    "geography": ["Singapore"],
+    "time": ["Daily training"],
+    "compatibility": ["Road running"],
+    "accessibility": ["Wide sizes available"],
+    "other": {
+      "experience_level": ["Beginner", "Intermediate"]
+    }
+  },
+  "narrative": "Built for runners who train through tropical weather."
+}
