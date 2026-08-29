@@ -1,0 +1,20 @@
+{
+  "product_id": "synthetic-demo-runner-001",
+  "title": "Synthetic Demo AeroRun Lightweight Shoe",
+  "brand": "Fixture Athletics (Synthetic)",
+  "category": "Running shoes",
+  "description": "Synthetic demo fixture: a lightweight, breathable running shoe for everyday training.",
+  "specifications": {
+    "color": "Blue",
+    "closure": "Lace-up",
+    "shoe_type": "Road running"
+  },
+  "price": 179,
+  "currency": "SGD",
+  "availability": "Synthetic fixture: in stock",
+  "claims": [
+    {
+      "claim": "Synthetic fixture claim: lightweight and breathable."
+    }
+  ]
+}

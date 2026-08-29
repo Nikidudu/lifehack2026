@@ -1,0 +1,128 @@
+{
+  "product_id": "synthetic-demo-runner-001",
+  "title": "Synthetic Demo AeroRun Lightweight Shoe",
+  "brand": "Fixture Athletics (Synthetic)",
+  "category": "Running shoes",
+  "description": "Synthetic demo fixture: a lightweight road-running shoe documented for half-marathon training in warm, humid conditions.",
+  "specifications": {
+    "weight_per_shoe": "Synthetic fixture value: 235 g in sample size EU 42",
+    "heel_to_toe_drop": "Synthetic fixture value: 8 mm",
+    "cushioning": "Synthetic fixture value: medium",
+    "shoe_type": "Road running"
+  },
+  "materials": [
+    "Synthetic fixture material: engineered mesh upper",
+    "Synthetic fixture material: rubber outsole"
+  ],
+  "dimensions": {
+    "size_range": "Synthetic fixture value: EU 36-47",
+    "fit": "Synthetic fixture value: standard and wide options"
+  },
+  "price": 179,
+  "currency": "SGD",
+  "availability": "Synthetic fixture: in stock",
+  "use_cases": [
+    {
+      "name": "Synthetic fixture: half-marathon training",
+      "description": "Synthetic scenario for regular road sessions while preparing for a half marathon.",
+      "conditions": [
+        "Synthetic condition: distances from 5 km to 21.1 km",
+        "Synthetic condition: paved road surfaces"
+      ]
+    },
+    {
+      "name": "Synthetic fixture: humid-weather running",
+      "description": "Synthetic scenario for training in Singapore-style warm and humid weather.",
+      "conditions": [
+        "Synthetic condition: high humidity",
+        "Synthetic condition: warm tropical climate"
+      ]
+    }
+  ],
+  "target_personas": [
+    {
+      "name": "Synthetic persona: first-time half-marathon runner",
+      "description": "A fictional recreational runner building mileage for a first half marathon.",
+      "priorities": [
+        "Synthetic priority: low shoe weight",
+        "Synthetic priority: breathable upper"
+      ],
+      "constraints": [
+        "Synthetic constraint: budget below S$200",
+        "Synthetic constraint: humid training environment"
+      ]
+    },
+    {
+      "name": "Synthetic persona: tropical-climate road runner",
+      "description": "A fictional runner seeking an everyday shoe for paved routes in Singapore.",
+      "priorities": [
+        "Synthetic priority: warm-weather comfort",
+        "Synthetic priority: road-running compatibility"
+      ],
+      "constraints": [
+        "Synthetic constraint: Singapore availability",
+        "Synthetic constraint: price of S$179"
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "alternative": "Synthetic comparison fixture: 300 g conventional road trainer",
+      "advantages": [
+        "Synthetic fixture comparison: listed sample weight is 65 g lower"
+      ],
+      "disadvantages": [
+        "Synthetic fixture comparison: medium cushioning may not suit runners seeking maximum cushioning"
+      ],
+      "evidence": "Synthetic fixture comparison sheet; not a real-world product test"
+    },
+    {
+      "alternative": "Synthetic comparison fixture: S$220 premium trainer",
+      "advantages": [
+        "Synthetic fixture comparison: listed price is S$41 lower"
+      ],
+      "disadvantages": [
+        "Synthetic fixture comparison: no carbon plate is listed"
+      ],
+      "evidence": "Synthetic fixture catalog comparison; not external market evidence"
+    }
+  ],
+  "claims": [
+    {
+      "claim": "Synthetic fixture claim: sample shoe weight is 235 g in EU size 42.",
+      "evidence": "Synthetic fixture laboratory record created solely for this hackathon demo",
+      "source": "synthetic-fixture://aerorun/weight-record"
+    },
+    {
+      "claim": "Synthetic fixture claim: the engineered mesh upper is intended for airflow in humid conditions.",
+      "evidence": "Synthetic fixture material-design note created solely for this hackathon demo",
+      "source": "synthetic-fixture://aerorun/material-note"
+    }
+  ],
+  "constraints_handled": {
+    "budget": [
+      "Synthetic fixture: S$179, below a S$200 ceiling"
+    ],
+    "climate": [
+      "Synthetic fixture: warm and humid conditions"
+    ],
+    "geography": [
+      "Synthetic fixture: listed for Singapore"
+    ],
+    "time": [
+      "Synthetic fixture: half-marathon training cycle"
+    ],
+    "compatibility": [
+      "Synthetic fixture: paved road running"
+    ],
+    "accessibility": [
+      "Synthetic fixture: standard and wide fit options"
+    ],
+    "other": {
+      "experience_level": [
+        "Synthetic fixture: beginner to intermediate runners"
+      ]
+    }
+  },
+  "narrative": "Synthetic hackathon fixture: AeroRun is presented as a lightweight road-training option for recreational runners preparing for a half marathon in Singapore's humid climate while keeping the listed purchase price below S$200. All product facts in this record are fictional demo values."
+}

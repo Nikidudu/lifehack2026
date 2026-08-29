@@ -138,10 +138,13 @@ def score_structured_attributes(product: Product) -> DimensionEvaluation:
 
 
 def score_use_case_coverage(product: Product) -> DimensionEvaluation:
+    use_cases = list(
+        {item.model_dump_json().casefold(): item for item in product.use_cases}.values()
+    )
     score = 0
     issues: list[str] = []
     suggestions: list[str] = []
-    for index, use_case in enumerate(product.use_cases[:3]):
+    for index, use_case in enumerate(use_cases[:3]):
         conditions = _unique_strings(use_case.conditions)
         score += int(_present(use_case.name))
         score += 2 * int(_present(use_case.description))
@@ -150,20 +153,23 @@ def score_use_case_coverage(product: Product) -> DimensionEvaluation:
             issues.append(f"use_cases[{index}] lacks a clear name or description.")
         if len(conditions) < 2:
             issues.append(f"use_cases[{index}] has fewer than two distinct conditions.")
-    if len(product.use_cases) < 3:
-        issues.append(f"Only {len(product.use_cases)} use case(s) are provided; three earn full coverage.")
+    if len(use_cases) < 3:
+        issues.append(f"Only {len(use_cases)} distinct use case(s) are provided; three earn full coverage.")
         suggestions.append("Describe additional concrete scenarios the product supports, including the environmental or usage conditions for each.")
-    if product.use_cases and any(len(_unique_strings(item.conditions)) < 2 for item in product.use_cases[:3]):
+    if use_cases and any(len(_unique_strings(item.conditions)) < 2 for item in use_cases[:3]):
         suggestions.append("For each use case, add specific applicable conditions such as environment, frequency, surface, or operating context.")
     missing = ["use_cases"] if not product.use_cases else []
     return _evaluation(score, "use_case_coverage", issues, suggestions, missing)
 
 
 def score_persona_coverage(product: Product) -> DimensionEvaluation:
+    personas = list(
+        {item.model_dump_json().casefold(): item for item in product.target_personas}.values()
+    )
     score = 0
     issues: list[str] = []
     suggestions: list[str] = []
-    for index, persona in enumerate(product.target_personas[:3]):
+    for index, persona in enumerate(personas[:3]):
         score += int(_present(persona.name))
         score += int(_present(persona.description))
         score += int(bool(_unique_strings(persona.priorities)))
@@ -172,11 +178,11 @@ def score_persona_coverage(product: Product) -> DimensionEvaluation:
             issues.append(f"target_personas[{index}] has no stated priorities.")
         if not _unique_strings(persona.constraints):
             issues.append(f"target_personas[{index}] has no stated constraints.")
-    if len(product.target_personas) < 3:
-        issues.append(f"Only {len(product.target_personas)} persona(s) are provided; three earn full coverage.")
+    if len(personas) < 3:
+        issues.append(f"Only {len(personas)} distinct persona(s) are provided; three earn full coverage.")
         suggestions.append("Add distinct buyer personas with their decision priorities and purchasing or usage constraints.")
-    if product.target_personas and any(
-        not _present(item.name) or not _present(item.description) for item in product.target_personas[:3]
+    if personas and any(
+        not _present(item.name) or not _present(item.description) for item in personas[:3]
     ):
         suggestions.append("Give every persona a clear name and description explaining who the buyer is.")
     missing = ["target_personas"] if not product.target_personas else []
@@ -212,8 +218,8 @@ def score_claims_and_evidence(product: Product) -> DimensionEvaluation:
         claim_present = _present(claim.claim)
         evidence_present = _present(claim.evidence)
         score += int(claim_present)
-        score += 3 * int(evidence_present)
-        score += int(evidence_present and _present(claim.source))
+        score += 3 * int(claim_present and evidence_present)
+        score += int(claim_present and evidence_present and _present(claim.source))
         if claim_present and not evidence_present:
             message = f"claims[{index}] is unsupported: {claim.claim.strip()}"
             issues.append(message)
