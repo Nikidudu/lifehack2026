@@ -1,20 +1,22 @@
 """Contracts for Person B's content-generation pipeline."""
 
+from __future__ import annotations
+
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.models.product import Product
+from app.models.product import Comparison, HandledConstraints, Product, TargetPersona, UseCase
 from app.models.scoring import ScoringResult
 
 
-def _empty(value: Any) -> bool:
+def is_empty(value: Any) -> bool:
     if value is None or isinstance(value, str) and not value.strip():
         return True
     if isinstance(value, (list, dict, set, tuple)):
         return not value
     if isinstance(value, BaseModel):
-        return all(_empty(item) for item in value.model_dump().values())
+        return all(is_empty(item) for item in value.model_dump().values())
     return False
 
 
@@ -44,7 +46,7 @@ class ImprovementResult(BaseModel):
             improved = getattr(self.improved_product, name)
             if original == improved:
                 continue
-            if not _empty(original):
+            if not is_empty(original):
                 raise ValueError(f"generated content cannot overwrite populated field: {name}")
             changed.add(name)
 
@@ -55,3 +57,32 @@ class ImprovementResult(BaseModel):
         if changed != declared:
             raise ValueError("generated_fields must exactly identify changed product fields")
         return self
+
+
+class ProductEnrichment(BaseModel):
+    """Semantic fields the generator may propose without inventing hard facts."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    description: str | None
+    use_cases: list[UseCase]
+    target_personas: list[TargetPersona]
+    constraints_handled: GeneratedConstraints | None
+    narrative: str | None
+    comparisons: list[Comparison] = Field(default_factory=list)
+
+
+class GeneratedConstraints(BaseModel):
+    """Fixed-key constraint output compatible with strict structured generation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    budget: list[str]
+    climate: list[str]
+    geography: list[str]
+    time: list[str]
+    compatibility: list[str]
+    accessibility: list[str]
+
+
+ProductEnrichment.model_rebuild()

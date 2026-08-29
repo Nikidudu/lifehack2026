@@ -2,5 +2,6 @@ fastapi
 httpx
 openai
 python-dotenv
+python-multipart
 pytest
 uvicorn

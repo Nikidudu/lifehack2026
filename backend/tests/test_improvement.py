@@ -18,7 +18,8 @@ def request_payload(product: Product) -> dict[str, object]:
     }
 
 
-def test_improve_placeholder_returns_product_unchanged() -> None:
+def test_improve_without_api_key_returns_product_unchanged(monkeypatch) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     product = Product(title="Known product", brand="Known brand")
 
     response = client.post("/api/v1/improve", json=request_payload(product))
@@ -29,7 +30,7 @@ def test_improve_placeholder_returns_product_unchanged() -> None:
     assert body["improved_product"] == product.model_dump(mode="json")
     assert body["generated_fields"] == []
     assert body["warnings"] == [
-        "Content generation is not configured; product returned unchanged."
+        "OPENAI_API_KEY is not configured; product returned unchanged."
     ]
 
 

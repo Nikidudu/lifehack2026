@@ -1,6 +1,6 @@
 """Request and response model package."""
 
-from app.models.improvement import ImprovementRequest, ImprovementResult
+from app.models.improvement import ImprovementRequest, ImprovementResult, ProductEnrichment
 from app.models.product import (
     Claim,
     Comparison,
@@ -32,6 +32,7 @@ __all__ = [
     "ImprovementRequest",
     "ImprovementResult",
     "Product",
+    "ProductEnrichment",
     "ReadinessJudgeResult",
     "ReadinessComparisonRequest",
     "ReadinessComparisonResult",

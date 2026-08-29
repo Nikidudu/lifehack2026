@@ -6,7 +6,9 @@ import {
   newOtherConstraint,
 } from "./product.js";
 
-const openSections = new Set(["core"]);
+const openSections = new Set([
+  "core", "attributes", "use-cases", "personas", "comparisons", "claims", "constraints", "narrative",
+]);
 const sectionNodes = new Map();
 let badgeUpdaters = [];
 let notifyChange = () => {};

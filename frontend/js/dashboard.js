@@ -234,9 +234,7 @@ function baselineBar(state, handlers) {
       ? el("span", {},
           `Baseline: ${baseline.result.total_score}/100 (${baseline.result.readiness_level}) captured ${baseline.at}`)
       : el("span", {}, "No baseline captured yet — the first score becomes the baseline."),
-    baseline && !isCurrent
-      ? el("button", { class: "btn ghost tiny", type: "button", onclick: handlers.onSetBaseline }, "Use current as baseline")
-      : null,
+    baseline && !isCurrent ? el("span", { class: "hint" }, "Automatically using the previous score") : null,
     baseline
       ? el("button", { class: "btn ghost tiny", type: "button", onclick: handlers.onClearBaseline }, "Clear")
       : null);

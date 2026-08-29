@@ -89,6 +89,13 @@ Complete fixtures are available in `examples/`.
 
 ## Endpoints
 
+### Batch catalog workflow
+
+- `POST /api/v1/catalog/import` accepts a SQLite file as multipart field `database`. The MVP adapter supports the Lifeo `watches`/`collections`/`specs` schema and returns canonical Product objects without modifying the database.
+- `POST /api/v1/suggest` accepts `{ "products": [Product, ...] }` (maximum 50) and returns unverified, per-field AI suggestions. Suggestions are not applied by the backend; the client must obtain user acceptance.
+
+In the frontend, choose `lifeo.db`, click **Import database**, select products from the catalog dropdown, then click **Generate suggestions**. Review each field and click **Accept** only when wanted.
+
 | Method | Path | Purpose | OpenAI required |
 |---|---|---|---|
 | GET | `/health` | Service health | No |
@@ -97,7 +104,7 @@ Complete fixtures are available in `examples/`.
 | POST | `/api/v1/evaluate` | Optional semantic LLM judge | Yes |
 | POST | `/api/v1/analyze` | Deterministic score plus optional judge | Optional |
 | POST | `/api/v1/compare` | Compare before/after deterministic scores | No |
-| POST | `/api/v1/improve` | Person B generation boundary | No for placeholder |
+| POST | `/api/v1/improve` | Grounded, fill-only semantic generation | Yes for generation |
 | POST | `/api/v1/simulate` | Person D simulation boundary | No for placeholder |
 
 ### Health
@@ -219,13 +226,13 @@ Response:
 ```json
 {
   "original_product": {"title": "Demo Shoe"},
-  "improved_product": {"title": "Demo Shoe", "category": "Running shoes"},
-  "generated_fields": ["category"],
-  "warnings": []
+  "improved_product": {"title": "Demo Shoe", "narrative": "Generated only from supplied facts."},
+  "generated_fields": ["narrative"],
+  "warnings": ["AI-generated semantic fields require review against source catalog data."]
 }
 ```
 
-Connect the implementation by replacing the body of:
+The implementation is located at:
 
 ```text
 app/services/generation.py → improve_product(request)
@@ -236,11 +243,12 @@ Rules:
 - Consume `request.product` as a validated `Product` object.
 - Use `request.score` to identify gaps; do not recalculate or mutate it.
 - Return both the unchanged original and a new validated `Product`.
-- Fill only empty top-level fields. Populated fields cannot be overwritten.
+- Generate only missing `description`, `use_cases`, `target_personas`, `constraints_handled`, and `narrative` fields.
+- Populated fields cannot be overwritten.
 - List every changed field in `generated_fields`; undeclared changes fail validation.
 - Never invent evidence or silently convert unsupported claims into supported claims.
 
-The current placeholder returns the product unchanged with a warning.
+Without `OPENAI_API_KEY`, or if generation fails, the product is returned unchanged with a safe warning.
 
 ## Integration for Person C
 

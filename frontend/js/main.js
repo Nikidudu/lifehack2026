@@ -1,7 +1,7 @@
 /** App wiring: state, persistence, and the input → score → fix → re-score loop. */
 
 import { $, el, mount } from "./dom.js";
-import { getHealth, getSchema, scoreProduct, generateProduct, normalizeBase, ApiError } from "./api.js";
+import { getHealth, getSchema, scoreProduct, importCatalog, suggestProducts, chatWithCoach, normalizeBase, ApiError } from "./api.js";
 import { emptyDraft, fromPayload, toPayload, validateDraft } from "./product.js";
 import { SAMPLES } from "./samples.js";
 import { renderForm, refreshBadges, applyFlags, focusSection } from "./form.js";
@@ -23,6 +23,11 @@ const state = {
   view: "form",
   busy: false,
   dirty: false,
+  catalog: [],
+  catalogIndex: 0,
+  proposals: [],
+  coachQuestion: null,
+  coachMessages: [{ role: "assistant", text: "Add or import a product, then score it. I’ll ask focused questions to improve its readiness." }],
 };
 
 const ui = {};
@@ -79,6 +84,7 @@ function renderVersions() {
 }
 
 function renderFlow() {
+  if (!ui.flowSteps) return;
   const hasTitle = Boolean(String(state.draft.title).trim());
   const done = {
     input: hasTitle,
@@ -179,6 +185,121 @@ function setView(view) {
   renderJson();
 }
 
+function renderCatalog() {
+  ui.catalogProduct.hidden = !state.catalog.length;
+  mount(ui.catalogProduct, state.catalog.map((product, index) =>
+    el("option", { value: String(index), selected: index === state.catalogIndex }, `${index + 1}. ${product.title}`)));
+}
+
+function renderSuggestions() {
+  ui.suggestions.hidden = !state.proposals.length;
+  mount(ui.suggestions, state.proposals.flatMap((proposal) => proposal.suggestions.map((suggestion) =>
+    el("div", { class: "suggestion" },
+      el("div", {}, el("strong", {}, proposal.title), el("span", { class: "badge info" }, suggestion.field),
+        el("pre", {}, JSON.stringify(suggestion.value, null, 2))),
+      el("button", { class: "btn tiny", type: "button", onclick: () => acceptSuggestion(proposal, suggestion) }, "Accept")))));
+}
+
+function renderCoach() {
+  mount(ui.coachMessages,
+    state.coachMessages.map((message) => el("div", { class: `coach-message ${message.role}` }, message.text)),
+    state.coachQuestion === "busy"
+      ? el("div", { class: "coach-message assistant thinking", "aria-label": "GPT is thinking" }, el("i"), el("i"), el("i"))
+      : null);
+  ui.coachMessages.scrollTop = ui.coachMessages.scrollHeight;
+  const ready = state.coachQuestion === "ready";
+  ui.coachAnswer.disabled = !ready;
+  ui.coachSkip.disabled = !ready;
+  ui.coachAnswer.placeholder = state.coachQuestion === "busy" ? "GPT is thinking…" : ready ? "Type your answer…" : "Score a product to start the coach";
+}
+
+async function askCoach(message) {
+  if (!state.result || state.coachQuestion === "busy") return;
+  const history = state.coachMessages.slice(1).map((item) => ({ role: item.role, content: item.text }));
+  const startsConversation = message === "Begin the coaching conversation by asking the single most useful question.";
+  if (!startsConversation) state.coachMessages.push({ role: "user", text: message });
+  state.coachQuestion = "busy";
+  renderCoach();
+  try {
+    const response = await chatWithCoach(state.apiBase, toPayload(state.draft), state.result, history, message);
+    const previous = toPayload(state.draft);
+    state.draft = fromPayload(response.updated_product).draft;
+    state.dirty = JSON.stringify(previous) !== JSON.stringify(response.updated_product);
+    const changed = response.changed_fields?.length ? ` Updated: ${response.changed_fields.join(", ")}.` : "";
+    state.coachMessages.push({ role: "assistant", text: `${response.message}${changed}` });
+    state.coachQuestion = "ready";
+    if (state.catalog.length) state.catalog[state.catalogIndex] = toPayload(state.draft);
+    renderEditor(); renderJson(); renderFlow(); updateScoreButton(); renderCoach(); save();
+    if (state.dirty) await runScore();
+  } catch (error) {
+    state.coachQuestion = "ready";
+    state.coachMessages.push({ role: "assistant", text: `${error.message} Check OPENAI_API_KEY and try again.` });
+    renderCoach();
+  }
+}
+
+async function answerCoach(event) {
+  event.preventDefault();
+  const answer = ui.coachAnswer.value.trim();
+  if (!answer || state.coachQuestion !== "ready") return;
+  ui.coachAnswer.value = "";
+  await askCoach(answer);
+}
+
+function skipCoachQuestion() {
+  if (state.coachQuestion === "ready") askCoach("Skip that question and ask a different useful question.");
+}
+
+function selectCatalogProduct(index) {
+  if (state.catalog.length) state.catalog[state.catalogIndex] = toPayload(state.draft);
+  state.catalogIndex = index;
+  state.draft = fromPayload(state.catalog[index]).draft;
+  state.result = null;
+  state.scoreCount = 0;
+  state.baseline = null;
+  state.dirty = false;
+  state.coachQuestion = null;
+  state.coachMessages = [{ role: "assistant", text: `Now reviewing ${state.draft.title}. Score it and I’ll guide the improvements.` }];
+  renderCoach();
+  renderEditor(); renderCatalog(); renderResultsPanel(); renderFlow(); updateScoreButton();
+}
+
+function acceptSuggestion(proposal, suggestion) {
+  const product = structuredClone(state.catalog[proposal.product_index] || toPayload(state.draft));
+  product[suggestion.field] = suggestion.value;
+  if (state.catalog.length) state.catalog[proposal.product_index] = product;
+  if (!state.catalog.length || proposal.product_index === state.catalogIndex) {
+    state.draft = fromPayload(product).draft;
+    state.dirty = true;
+    renderEditor(); renderFlow(); updateScoreButton();
+  }
+  proposal.suggestions = proposal.suggestions.filter((item) => item !== suggestion);
+  state.proposals = state.proposals.filter((item) => item.suggestions.length);
+  renderSuggestions();
+  setMessage(ui.editorMessage, `Accepted ${suggestion.field} for ${proposal.title}. Re-score when ready.`, "ok");
+}
+
+function goToStep(step) {
+  const showEditor = step === "input" || step === "rescore";
+  if (showEditor) {
+    setView("form");
+    ui.editorPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (step === "input") focusSection("core");
+    else ui.score.focus();
+    return;
+  }
+
+  if (!state.result) {
+    setMessage(ui.editorMessage, "Enter a product and score it first.", "error");
+    ui.editorPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  state.tab = step === "fix" ? "fixes" : step === "proof" ? "proof" : "breakdown";
+  renderResultsPanel();
+  ui.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 /* ---------- actions ---------- */
 
 async function connect() {
@@ -207,6 +328,7 @@ async function runScore() {
   }
   setMessage(ui.editorMessage, "");
 
+  const previousResult = state.result;
   state.busy = true;
   state.error = null;
   updateScoreButton();
@@ -217,16 +339,22 @@ async function runScore() {
     state.result = result;
     state.scoreCount += 1;
     state.dirty = false;
-    if (!state.baseline) {
+    if (previousResult && !sameResult(previousResult, result)) {
+      state.baseline = {
+        result: previousResult,
+        at: new Date().toLocaleTimeString(),
+        scoringVersion: state.schema?.scoring_version || "1.0.0",
+      };
+      state.tab = "proof";
+    } else if (!previousResult) {
       state.baseline = {
         result,
         at: new Date().toLocaleTimeString(),
         scoringVersion: state.schema?.scoring_version || "1.0.0",
       };
-    } else if (!sameResult(state.baseline.result, result)) {
-      state.tab = "proof";
     }
     if (state.connection !== "ok") setStatus("ok", "Backend connected");
+    return result;
   } catch (error) {
     state.error = error instanceof ApiError ? error : new ApiError(String(error.message || error));
     if (state.error.code === "network") setStatus("down", "Backend unreachable");
@@ -237,6 +365,7 @@ async function runScore() {
     applyFlags(weakSections(state.result));
     renderFlow();
     save();
+    if (state.result && !state.coachQuestion) askCoach("Begin the coaching conversation by asking the single most useful question.");
   }
 }
 
@@ -247,25 +376,36 @@ async function runGenerate() {
     return;
   }
   ui.generate.disabled = true;
-  setMessage(ui.editorMessage, "Requesting enrichment from /api/v1/generate…");
+  setMessage(ui.editorMessage, "Generating optional suggestions…");
   try {
-    const enriched = await generateProduct(state.apiBase, toPayload(state.draft));
-    const { draft, warnings } = fromPayload(enriched);
-    state.draft = draft;
-    state.dirty = true;
-    renderEditor();
-    renderJson();
-    renderFlow();
-    updateScoreButton();
-    save();
-    setMessage(ui.editorMessage, `Enriched draft loaded. ${warnings.join(" ")} Re-score to prove the improvement.`.trim(), "ok");
+    if (state.catalog.length) state.catalog[state.catalogIndex] = toPayload(state.draft);
+    const result = await suggestProducts(state.apiBase, state.catalog.length ? state.catalog : [toPayload(state.draft)]);
+    state.proposals = result.products || [];
+    renderSuggestions();
+    setMessage(ui.editorMessage, state.proposals.length ? `${state.proposals.length} product proposal sets ready. Accept only what you want.` : (result.warnings || []).join(" "));
   } catch (error) {
-    const message = error instanceof ApiError && (error.code === "not_found" || error.status === 405)
-      ? "The generation service is not wired up yet — POST /api/v1/generate is not served by this backend. Fill the gaps by hand, or load the enriched sample."
-      : error.message;
-    setMessage(ui.editorMessage, message, "error");
+    setMessage(ui.editorMessage, error.message, "error");
   } finally {
     ui.generate.disabled = false;
+  }
+}
+
+async function runImport(file = ui.databaseFile.files[0]) {
+  if (!file) return setMessage(ui.editorMessage, "Choose a SQLite database first.", "error");
+  ui.dropZone.classList.add("is-busy");
+  setMessage(ui.editorMessage, "Importing catalog…");
+  try {
+    const result = await importCatalog(state.apiBase, file);
+    state.catalog = result.products;
+    state.catalogIndex = 0;
+    state.proposals = [];
+    selectCatalogProduct(0);
+    renderSuggestions();
+    setMessage(ui.editorMessage, `Imported ${state.catalog.length} products. ${(result.warnings || []).join(" ")}`, "ok");
+  } catch (error) {
+    setMessage(ui.editorMessage, error.message, "error");
+  } finally {
+    ui.dropZone.classList.remove("is-busy");
   }
 }
 
@@ -318,6 +458,8 @@ function cacheNodes() {
   ui.statusText = $("#status-text");
   ui.versions = $("#versions");
   ui.flowSteps = $("#flow-steps");
+  ui.editorPanel = $("#editor-panel");
+  ui.resultsPanel = $("#results-panel");
   ui.sampleButtons = $("#sample-buttons");
   ui.formView = $("#form-view");
   ui.jsonView = $("#json-view");
@@ -329,18 +471,67 @@ function cacheNodes() {
   ui.results = $("#results");
   ui.score = $("#score");
   ui.generate = $("#generate");
+  ui.databaseFile = $("#database-file");
+  ui.databaseName = $("#database-name");
+  ui.dropZone = $("#drop-zone");
+  ui.catalogProduct = $("#catalog-product");
+  ui.suggestions = $("#suggestions");
+  ui.settingsToggle = $("#settings-toggle");
+  ui.settingsMenu = $("#settings-menu");
+  ui.coachMessages = $("#coach-messages");
+  ui.coachForm = $("#coach-form");
+  ui.coachAnswer = $("#coach-answer");
+  ui.coachSkip = $("#coach-skip");
   ui.viewButtons = Array.from(document.querySelectorAll(".seg-btn[data-view]"));
 }
 
 function wire() {
-  ui.reconnect.addEventListener("click", connect);
+  ui.reconnect.addEventListener("click", async () => {
+    await connect();
+    ui.settingsMenu.hidden = true;
+    ui.settingsToggle.setAttribute("aria-expanded", "false");
+  });
   ui.apiBase.addEventListener("keydown", (event) => {
     if (event.key === "Enter") connect();
   });
   ui.score.addEventListener("click", runScore);
   ui.generate.addEventListener("click", runGenerate);
+  ui.databaseFile.addEventListener("change", () => {
+    const file = ui.databaseFile.files[0];
+    if (file) {
+      ui.databaseName.textContent = file.name;
+      runImport(file);
+    }
+  });
+  ui.catalogProduct.addEventListener("change", () => selectCatalogProduct(Number(ui.catalogProduct.value)));
+  for (const eventName of ["dragenter", "dragover"]) {
+    ui.dropZone.addEventListener(eventName, (event) => { event.preventDefault(); ui.dropZone.classList.add("is-dragging"); });
+  }
+  for (const eventName of ["dragleave", "drop"]) {
+    ui.dropZone.addEventListener(eventName, (event) => { event.preventDefault(); ui.dropZone.classList.remove("is-dragging"); });
+  }
+  ui.dropZone.addEventListener("drop", (event) => {
+    const file = event.dataTransfer.files[0];
+    if (file) { ui.databaseName.textContent = file.name; runImport(file); }
+  });
+  ui.settingsToggle.addEventListener("click", () => {
+    ui.settingsMenu.hidden = !ui.settingsMenu.hidden;
+    ui.settingsToggle.setAttribute("aria-expanded", String(!ui.settingsMenu.hidden));
+  });
+  ui.coachForm.addEventListener("submit", answerCoach);
+  ui.coachSkip.addEventListener("click", skipCoachQuestion);
   ui.jsonApply.addEventListener("click", applyJson);
   ui.jsonCopy.addEventListener("click", copyJson);
+
+  for (const item of ui.flowSteps?.querySelectorAll("li") || []) {
+    item.addEventListener("click", () => goToStep(item.dataset.step));
+    item.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        goToStep(item.dataset.step);
+      }
+    });
+  }
 
   for (const button of ui.viewButtons) {
     button.addEventListener("click", () => setView(button.dataset.view));
@@ -383,6 +574,9 @@ async function boot() {
 
   wire();
   renderEditor();
+  renderCatalog();
+  renderSuggestions();
+  renderCoach();
   setView("form");
   updateScoreButton();
   renderFlow();

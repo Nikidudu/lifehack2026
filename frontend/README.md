@@ -26,7 +26,7 @@ There is no build step, no `package.json`, and no runtime dependency: plain ES m
 so any static server works (`python3 -m http.server 5173` from this directory is enough,
 `serve.py` just adds no-cache headers).
 
-If port 8000 is taken, run uvicorn elsewhere (`--port 8001`) and change **API base** in
+If port 8000 is taken, run uvicorn elsewhere (`--port 8001`) and change **Backend URL** in the settings menu in
 the header — it is stored per browser.
 
 ### Deep links (useful on a demo machine)
@@ -57,7 +57,7 @@ the header — it is stored per browser.
 | Header status dot | `GET /health` |
 | `schema` / `scoring` / `max` chips, dimension order | `GET /api/v1/schema` |
 | *Score product* | `POST /api/v1/score` |
-| *Auto-fill gaps* | `POST /api/v1/generate` — **not implemented yet**; a 404 is reported as "not wired up", nothing else breaks |
+| *Auto-fill gaps* | `POST /api/v1/improve` — grounded, fill-only semantic generation when `OPENAI_API_KEY` is configured |
 
 Nothing in the UI hardcodes the rubric: dimension maxima, ordering, and the total come
 from the score response and `/api/v1/schema`, so a scoring change in the backend shows up
@@ -84,15 +84,14 @@ The editor keeps a *draft* whose scalars are always strings (blank means "not pr
 fields, so `toPayload` is the only place allowed to build a request body, and pasting
 JSON with stray keys drops them with a warning rather than failing at the server.
 
-State (API base, draft, last result, baseline) is kept in `localStorage` so a reload
+State (backend URL, draft, last result, baseline) is kept in `localStorage` so a reload
 mid-pitch does not lose the before/after story. Failures there are ignored.
 
 ## Known limits
 
-- `POST /api/v1/generate` does not exist yet; *Auto-fill gaps* is a live client waiting
-  for that endpoint. Until it lands, the "enriched" sample stands in for it.
-- The optional LLM judge (`backend/app/services/llm_judge.py`) has no endpoint, so no
-  semantic scores are shown. When one is exposed, it belongs beside the deterministic
-  breakdown, not merged into it.
+- `/api/v1/improve` requires `OPENAI_API_KEY`; without it, the product is returned unchanged
+  with a warning. The "enriched" sample remains the reliable no-network demo fallback.
+- Semantic evaluation is available at `/api/v1/evaluate` and `/api/v1/analyze`, but this
+  focused frontend currently displays only deterministic scoring.
 - The `enriched` fixture is written for the demo. It is illustrative content, not
   vendor-supplied fact.

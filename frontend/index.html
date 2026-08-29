@@ -18,33 +18,26 @@
     </div>
 
     <div class="connection">
-      <label class="field inline">
-        <span>API base</span>
-        <input id="api-base" type="url" spellcheck="false" autocomplete="off" placeholder="http://127.0.0.1:8000">
-      </label>
-      <button id="reconnect" class="btn ghost" type="button">Reconnect</button>
       <div class="status" id="status" data-state="unknown">
         <span class="dot" aria-hidden="true"></span>
         <span id="status-text">Not connected</span>
       </div>
-      <div class="versions" id="versions" hidden></div>
+      <button id="settings-toggle" class="settings-button" type="button" aria-label="Connection settings" aria-expanded="false">⚙</button>
+      <div id="settings-menu" class="settings-menu" hidden>
+        <label class="field"><span>Backend URL</span><input id="api-base" type="url" spellcheck="false" autocomplete="off" placeholder="http://127.0.0.1:8000"></label>
+        <button id="reconnect" class="btn" type="button">Reconnect</button>
+        <div class="versions" id="versions" hidden></div>
+      </div>
     </div>
   </header>
 
-  <nav class="flow" aria-label="Demo flow">
-    <ol id="flow-steps">
-      <li data-step="input"><span>1</span>Input</li>
-      <li data-step="score"><span>2</span>Score</li>
-      <li data-step="fix"><span>3</span>Fix</li>
-      <li data-step="rescore"><span>4</span>Re-score</li>
-      <li data-step="proof"><span>5</span>Prove it worked</li>
-    </ol>
-  </nav>
-
   <main class="workspace">
-    <section class="panel editor" aria-label="Product data">
+    <section id="editor-panel" class="panel editor" aria-label="Product data">
       <div class="panel-head">
-        <h2>Vendor product data</h2>
+        <div class="product-heading">
+          <select id="catalog-product" aria-label="Current catalog product" hidden></select>
+          <h2>Product data</h2>
+        </div>
         <div class="seg" role="group" aria-label="Editor mode">
           <button class="seg-btn is-active" data-view="form" type="button">Form</button>
           <button class="seg-btn" data-view="json" type="button">JSON</button>
@@ -54,6 +47,15 @@
       <div class="samples">
         <span class="samples-label">Load sample</span>
         <div id="sample-buttons" class="sample-buttons"></div>
+      </div>
+
+      <div class="catalog-tools">
+        <input id="database-file" class="file-input" type="file" accept=".db,.sqlite,.sqlite3" aria-label="SQLite catalog file">
+        <label id="drop-zone" for="database-file" class="drop-zone">
+          <span class="drop-icon">⇧</span>
+          <span><strong>Drop a database here</strong><small>or click to choose · imports automatically</small></span>
+          <span id="database-name" class="database-name">.db, .sqlite, .sqlite3</span>
+        </label>
       </div>
 
       <div class="panel-body">
@@ -67,21 +69,32 @@
             <span id="json-message" class="inline-message"></span>
           </div>
         </div>
+        <div id="suggestions" hidden></div>
       </div>
 
       <footer class="panel-foot">
         <div id="editor-message" class="inline-message" role="status"></div>
         <div class="actions">
-          <button id="generate" class="btn ghost" type="button" title="Calls POST /api/v1/generate once the generation service is wired up">Auto-fill gaps</button>
+          <button id="generate" class="btn ghost" type="button">Generate suggestions</button>
           <button id="score" class="btn primary" type="button">Score product</button>
         </div>
       </footer>
     </section>
 
-    <section class="panel results" aria-label="Readiness result">
+    <section id="results-panel" class="panel results" aria-label="Readiness result">
       <div id="results"></div>
     </section>
   </main>
+
+  <section class="coach" aria-label="AI readiness coach">
+    <div class="coach-head"><strong>AI readiness coach</strong><span>Updates this product from your answers</span></div>
+    <div id="coach-messages" class="coach-messages" aria-live="polite"></div>
+    <form id="coach-form" class="coach-bar">
+      <input id="coach-answer" type="text" autocomplete="off" placeholder="Answer the readiness coach…">
+      <button id="coach-skip" class="btn ghost" type="button">Skip</button>
+      <button class="send-btn" type="submit" aria-label="Send answer">↑</button>
+    </form>
+  </section>
 
   <script type="module" src="./js/main.js"></script>
 </body>

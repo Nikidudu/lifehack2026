@@ -78,19 +78,34 @@ export const getSchema = (base) => request(base, "/api/v1/schema", { timeout: 80
 export const scoreProduct = (base, payload) =>
   request(base, "/api/v1/score", { method: "POST", body: payload, timeout: 20000 });
 
+export async function importCatalog(base, file) {
+  const data = new FormData();
+  data.append("database", file);
+  const response = await fetch(`${normalizeBase(base)}/api/v1/catalog/import`, { method: "POST", body: data });
+  const payload = await response.json().catch(() => null);
+  if (response.ok) return payload;
+  throw new ApiError(payload?.detail || `Import failed with HTTP ${response.status}.`, { status: response.status });
+}
+
+export const suggestProducts = (base, products) =>
+  request(base, "/api/v1/suggest", { method: "POST", body: { products }, timeout: 120000 });
+
+export const chatWithCoach = (base, product, score, messages, message) =>
+  request(base, "/api/v1/coach", {
+    method: "POST", body: { product, score, messages, message }, timeout: 90000,
+  });
+
 /**
- * Optional enrichment hook owned by the generation track. The endpoint does not
- * exist yet; a 404 is reported to the user rather than treated as a failure.
- * Accepts either a bare Product or an envelope such as { product: {...} }.
+ * Enrichment hook owned by the generation track.
  */
-export async function generateProduct(base, payload) {
-  const result = await request(base, "/api/v1/generate", {
+export async function generateProduct(base, product, score) {
+  const result = await request(base, "/api/v1/improve", {
     method: "POST",
-    body: payload,
+    body: { product, score },
     timeout: 90000,
   });
-  if (result && typeof result === "object" && result.product && typeof result.product === "object") {
-    return result.product;
+  if (result && typeof result === "object" && result.improved_product && typeof result.improved_product === "object") {
+    return result;
   }
-  return result;
+  throw new ApiError("The generation service returned an invalid response.", { code: "invalid_response" });
 }

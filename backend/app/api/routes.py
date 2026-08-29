@@ -1,7 +1,13 @@
 """HTTP routes for the versioned public API."""
 
-from fastapi import APIRouter, HTTPException
+import sqlite3
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 
+from fastapi import APIRouter, File, HTTPException, UploadFile
+
+from app.models.batch import BatchImprovementRequest, BatchImprovementResult, CatalogImportResult
+from app.models.coach import CoachRequest, CoachResponse
 from app.models.improvement import ImprovementRequest, ImprovementResult
 from app.models.product import (
     PRODUCT_SCHEMA_VERSION,
@@ -22,9 +28,40 @@ from app.services import llm_judge as llm_judge_service
 from app.services import generation as generation_service
 from app.services import scoring as scoring_service
 from app.services import simulation as simulation_service
+from app.services import batch_generation, catalog_import
+from app.services import coach as coach_service
 
 
 router = APIRouter(prefix="/api/v1")
+
+
+@router.post("/coach", response_model=CoachResponse)
+def coach_product(request: CoachRequest) -> CoachResponse:
+    try:
+        return coach_service.chat(request)
+    except coach_service.CoachUnavailableError:
+        raise HTTPException(status_code=503, detail="AI coach unavailable") from None
+
+
+@router.post("/catalog/import", response_model=CatalogImportResult)
+async def import_catalog(database: UploadFile = File(...)) -> CatalogImportResult:
+    data = await database.read(10_000_001)
+    if len(data) > 10_000_000 or not data.startswith(b"SQLite format 3\x00"):
+        raise HTTPException(status_code=422, detail="Upload a valid SQLite database no larger than 10 MB")
+    with NamedTemporaryFile(suffix=".db", delete=False) as temporary:
+        temporary.write(data)
+        path = Path(temporary.name)
+    try:
+        return catalog_import.import_sqlite(path)
+    except (sqlite3.Error, ValueError):
+        raise HTTPException(status_code=422, detail="Unsupported or invalid catalog database") from None
+    finally:
+        path.unlink(missing_ok=True)
+
+
+@router.post("/suggest", response_model=BatchImprovementResult)
+def suggest_catalog(request: BatchImprovementRequest) -> BatchImprovementResult:
+    return batch_generation.suggest_products(request)
 
 
 @router.post("/simulate", response_model=SimulationResult)
